@@ -4,12 +4,12 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/socket/socket.h"
 
-// #ifdef USE_BINARY_SENSOR
-// #include "esphome/components/binary_sensor/binary_sensor.h"
-// #endif
-// #ifdef USE_SENSOR
-// #include "esphome/components/sensor/sensor.h"
-// #endif
+#ifdef USE_BINARY_SENSOR
+#include "esphome/components/binary_sensor/binary_sensor.h"
+#endif
+#ifdef USE_SENSOR
+#include "esphome/components/sensor/sensor.h"
+#endif
 
 #include <Arduino.h>
 
@@ -76,21 +76,21 @@ class I2CSnifferComponent : public esphome::Component {
         size_t buf_size_;
 
         // Sniffer specific
-        byte i2c_status_ = I2C_IDLE;            //Status of the I2C BUS
+        uint8_t i2c_status_ = I2C_IDLE;         //Status of the I2C BUS
         uint32_t last_start_millis_ = 0;        //stoe the last time
-        byte data_buffer_[9600];                //Array for storing data of the I2C communication
+        uint8_t data_buffer_[9600];             //Array for storing data of the I2C communication
         uint16_t buffer_poi_w_ = 0;             //points to the first empty position in the dataBufer to write
         uint16_t buffer_poi_r_ = 0;             //points to the position where to start read from
-        byte bit_count_ = 0;                    //counter of bit appeared on the BUS
+        uint8_t bit_count_ = 0;                 //counter of bit appeared on the BUS
         uint16_t byte_count_ = 0;               //counter of bytes were writen in one communication.
-        byte i2c_bit_d_ = 0;                    //Container of the actual SDA bit
-        byte i2c_bit_d2_ = 0;                   //Container of the actual SDA bit
-        byte i2c_bit_c_ = 0;                    //Container of the actual SDA bit
-        byte i2c_clk_ = 0;                      //Container of the actual SCL bit
-        byte i2c_ack_ = 0;                      //Container of the last ACK value
-        byte i2c_case_ = 0;                     //Container of the last ACK value
+        // uint8_t i2c_bit_d_ = 0;                 //Container of the actual SDA bit
+        // uint8_t i2c_bit_d2_ = 0;                //Container of the actual SDA bit
+        // uint8_t i2c_bit_c_ = 0;                 //Container of the actual SDA bit
+        // uint8_t i2c_clk_ = 0;                   //Container of the actual SCL bit
+        // uint8_t i2c_ack_ = 0;                   //Container of the last ACK value
+        // uint8_t i2c_case_ = 0;                  //Container of the last ACK value
+        // uint8_t resp_count_ =  0;               //Auxiliary variable to help detect next byte instead of STOP these variables just for statistic reasons
         uint16_t false_start_ = 0;              //Counter of false start events
-        //byte resp_count_ =  0;                  //Auxiliary variable to help detect next byte instead of STOP these variables just for statistic reasons
         uint16_t scl_up_cnt_ = 0;               //Auxiliary variable to count rising SCL
         uint16_t sda_up_cnt_ = 0;               //Auxiliary variable to count rising SDA
         uint16_t sda_down_cnt_ = 0;             //Auxiliary variable to count falling SDA
@@ -107,7 +107,7 @@ class I2CSnifferComponent : public esphome::Component {
         esphome::sensor::Sensor *connection_count_sensor_;
 #endif
 
-        std::unique_ptr<uint8_t[]> buf_{};
+        std::unique_ptr<uint8_t []> buf_{};
         size_t buf_head_{0};
         size_t buf_tail_{0};
 

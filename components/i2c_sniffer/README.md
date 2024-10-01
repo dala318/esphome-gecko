@@ -3,7 +3,7 @@ A component to sniff I2C data from connacted bus
 
 A fusion of the following code-bases
 
-* [ESP Home Strema Server](https://github.com/oxan/esphome-stream-server) by @oxan
+* [ESP Home Stream Server](https://github.com/oxan/esphome-stream-server) by @oxan
 * [I2C Sniffer](https://github.com/WhitehawkTailor/I2C-sniffer) by @WhitehawkTailor
 
 # Usage
@@ -20,4 +20,18 @@ i2c_sniffer:
   scl: GPIO12
   port: 6638
   buffer_size: 256
+```
+
+# Sensors
+
+```yaml
+binary_sensor:
+  - platform: i2c_sniffer
+    connected:
+      name: Connected
+
+sensor:
+  - platform: i2c_sniffer
+    connection_count:
+      name: Number of connections
 ```

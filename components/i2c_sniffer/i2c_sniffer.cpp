@@ -108,7 +108,7 @@ void I2CSnifferComponent::read()
 {
     if(this->i2c_status_ == I2C_IDLE)
     {
-        if(this->buffer_poi_w_ == this->buffer_poi_r_)//There is nothing to say
+        if(this->buffer_poi_w_ == this->buffer_poi_r_)  //There is nothing to say
             return;
 
         uint16_t pw = this->buffer_poi_w_;
@@ -123,8 +123,8 @@ void I2CSnifferComponent::read()
         //if there is no I2C action in progress and there wasn't during the Serial.print then buffer was printed out completly and can be reset.
         if(this->i2c_status_ == I2C_IDLE && pw == this->buffer_poi_w_)
         {
-            this->buffer_poi_w_ =0;
-            this->buffer_poi_r_ =0;
+            this->buffer_poi_w_ = 0;
+            this->buffer_poi_r_ = 0;
         }	
     }
 
@@ -219,45 +219,45 @@ void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferCompone
 
 
     //get the value from SDA
-    sniffer->i2c_bit_c_ =  sniffer->sda_pin_->digital_read();
-    // sniffer->i2c_bit_c_ =  digitalRead(PIN_SDA);
+    uint8_t i2c_bit_c =  sniffer->sda_pin_->digital_read();
 
     //decide wherewe are and what to do with incoming data
-    sniffer->i2c_case_ = 0;//normal case
+    uint8_t i2c_case = 0;  //normal case
 
-    if(sniffer->bit_count_==8)//ACK case
-        sniffer->i2c_case_ = 1;
+    if(sniffer->bit_count_ == 8)  //ACK case
+        i2c_case = 1;
 
-    if(sniffer->bit_count_==7 && sniffer->byte_count_==0 )// R/W if the first address byte
-        sniffer->i2c_case_ = 2;
+    // R/W if the first address byte
+    if(sniffer->bit_count_ == 7 && sniffer->byte_count_ == 0 )
+        i2c_case = 2;
 
     sniffer->bit_count_++;
 
-    switch (sniffer->i2c_case_)
+    switch (i2c_case)
     {
-        case 0: //normal case
-            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '0' + sniffer->i2c_bit_c_;//48
+        case 0:  // Normal case
+            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '0' + i2c_bit_c;  //48
             break;
-        case 1://ACK
-            if(sniffer->i2c_bit_c_)//1 NACK SDA HIGH
+        case 1:  // ACK
+            if(i2c_bit_c)  // 1 NACK SDA HIGH
             {
-                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '-';//45
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '-';  //45
             }
-            else//0 ACK SDA LOW
+            else  // 0 ACK SDA LOW
             {
-                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '+';//43
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '+';  //43
             }	
             sniffer->byte_count_++;
             sniffer->bit_count_=0;
             break;
         case 2:
-            if(sniffer->i2c_bit_c_)
+            if(i2c_bit_c)
             {
-                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'R';//82
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'R';  //82
             }
             else
             {
-                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'W';//87
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'W';  //87
             }
         break;
     }
@@ -265,42 +265,41 @@ void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferCompone
 
 void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer)
 {
-    //make sure that the SDA is in stable state
+    uint8_t i2c_bit_d = 0;
+    uint8_t i2c_bit_d2 = 1;
+    // Make sure that the SDA is in stable state
     do
     {
-        sniffer->i2c_bit_d_ = sniffer->sda_pin_->digital_read();
-        sniffer->i2c_bit_d2_ = sniffer->sda_pin_->digital_read();
-    } while (sniffer->i2c_bit_d_ != sniffer->i2c_bit_d2_);
+        i2c_bit_d = sniffer->sda_pin_->digital_read();
+        i2c_bit_d2 = sniffer->sda_pin_->digital_read();
+    } while (i2c_bit_d != i2c_bit_d2);
 
-    //sniffer->i2c_bit_d_ =  digitalRead(PIN_SDA);
-
-    if(sniffer->i2c_bit_d_)//RISING if SDA is HIGH (1)
+    if(i2c_bit_d)  //RISING if SDA is HIGH (1)
     {
-        
-        sniffer->i2c_clk_ = sniffer->scl_pin_->digital_read();
-        if(sniffer->i2c_status_ =! I2C_IDLE && sniffer->i2c_clk_ == 1)//If SCL still HIGH then it is a STOP sign
+        uint8_t i2c_clk = sniffer->scl_pin_->digital_read();
+        if(sniffer->i2c_status_ =! I2C_IDLE && i2c_clk == 1)  //If SCL still HIGH then it is a STOP sign
         {			
             //sniffer->i2c_status_ = I2C_STOP;
             sniffer->i2c_status_ = I2C_IDLE;
             sniffer->bit_count_ = 0;
             sniffer->byte_count_ = 0;
             sniffer->buffer_poi_w_--;
-            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 's';//115
+            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 's';  //115
             sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '\n'; //10
         }
         sniffer->sda_up_cnt_++;
     }
-    else //FALLING if SDA is LOW
+    else  //FALLING if SDA is LOW
     {
         
-        sniffer->i2c_clk_ = sniffer->scl_pin_->digital_read();
-        if(sniffer->i2c_status_ == I2C_IDLE && sniffer->i2c_clk_)//If SCL still HIGH than this is a START
+        uint8_t i2c_clk = sniffer->scl_pin_->digital_read();
+        if(sniffer->i2c_status_ == I2C_IDLE && i2c_clk)  //If SCL still HIGH than this is a START
         {
         sniffer->i2c_status_ = I2C_TRX;
-        //sniffer->last_start_millis_ = millis();//takes too long in an interrupt handler and caused timeout panic and CPU restart
+        //sniffer->last_start_millis_ = millis();  // Takes too long in an interrupt handler and caused timeout panic and CPU restart
         sniffer->bit_count_ = 0;
         sniffer->byte_count_ = 0;
-        sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'S';//83 STOP
+        sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'S';  //83 STOP
         //sniffer->i2c_status_ = START;		
         }
         sniffer->sda_down_cnt_++;
