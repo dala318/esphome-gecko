@@ -9,8 +9,8 @@ DEPENDENCIES = ["network"]
 
 MULTI_CONF = True
 
-ns = cg.global_ns
-I2CSnifferComponent = ns.class_("I2CSnifferComponent", cg.Component)
+i2c_sniffer_ns = cg.esphome_ns.namespace("i2c_sniffer")
+I2CSnifferComponent = i2c_sniffer_ns.class_("I2CSnifferComponent", cg.Component)
 
 
 def validate_buffer_size(buffer_size):
@@ -38,8 +38,10 @@ CONFIG_SCHEMA = cv.All(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    cg.add(var.set_sda_pin(config[CONF_SDA]))
-    cg.add(var.set_scl_pin(config[CONF_SCL]))
+    sda = await cg.gpio_pin_expression(config[CONF_SDA])
+    cg.add(var.set_sda_pin(sda))
+    scl = await cg.gpio_pin_expression(config[CONF_SCL])
+    cg.add(var.set_scl_pin(scl))
     cg.add(var.set_port(config[CONF_PORT]))
     cg.add(var.set_buffer_size(config[CONF_BUFFER_SIZE]))
 

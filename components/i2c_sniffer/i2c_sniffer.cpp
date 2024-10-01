@@ -8,9 +8,10 @@
 #include "esphome/components/network/util.h"
 #include "esphome/components/socket/socket.h"
 
-static const char *TAG = "i2c_sniffer";
+namespace esphome {
+namespace i2c_sniffer {
 
-using namespace esphome;
+static const char *TAG = "i2c_sniffer";
 
 void I2CSnifferComponent::setup() {
     ESP_LOGCONFIG(TAG, "Setting up stream server...");
@@ -30,10 +31,16 @@ void I2CSnifferComponent::setup() {
     this->socket_->bind(reinterpret_cast<struct sockaddr *>(&bind_addr), bind_addrlen);
     this->socket_->listen(8);
 
+    // sniffer specific
+    this->reset_i2c_variable();
+    this->scl_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_raising_scl, this, gpio::INTERRUPT_RISING_EDGE);
+    this->sda_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_change_sda, this, gpio::INTERRUPT_ANY_EDGE);
+
     this->publish_sensor();
 }
 
-void I2CSnifferComponent::loop() {
+void I2CSnifferComponent::loop()
+{
     this->accept();
     this->read();
     this->flush();
@@ -42,7 +49,8 @@ void I2CSnifferComponent::loop() {
     this->cleanup();
 }
 
-void I2CSnifferComponent::dump_config() {
+void I2CSnifferComponent::dump_config()
+{
     ESP_LOGCONFIG(TAG, "Stream Server:");
     ESP_LOGCONFIG(TAG, "  Address: %s:%u", esphome::network::get_use_address().c_str(), this->port_);
 #ifdef USE_BINARY_SENSOR
@@ -53,12 +61,14 @@ void I2CSnifferComponent::dump_config() {
 #endif
 }
 
-void I2CSnifferComponent::on_shutdown() {
+void I2CSnifferComponent::on_shutdown()
+{
     for (const Client &client : this->clients_)
         client.socket->shutdown(SHUT_RDWR);
 }
 
-void I2CSnifferComponent::publish_sensor() {
+void I2CSnifferComponent::publish_sensor()
+{
 #ifdef USE_BINARY_SENSOR
     if (this->connected_sensor_)
         this->connected_sensor_->publish_state(this->clients_.size() > 0);
@@ -69,7 +79,8 @@ void I2CSnifferComponent::publish_sensor() {
 #endif
 }
 
-void I2CSnifferComponent::accept() {
+void I2CSnifferComponent::accept()
+{
     struct sockaddr_storage client_addr;
     socklen_t client_addrlen = sizeof(client_addr);
     std::unique_ptr<socket::Socket> socket = this->socket_->accept(reinterpret_cast<struct sockaddr *>(&client_addr), &client_addrlen);
@@ -83,7 +94,8 @@ void I2CSnifferComponent::accept() {
     this->publish_sensor();
 }
 
-void I2CSnifferComponent::cleanup() {
+void I2CSnifferComponent::cleanup()
+{
     auto discriminator = [](const Client &client) { return !client.disconnected; };
     auto last_client = std::partition(this->clients_.begin(), this->clients_.end(), discriminator);
     if (last_client != this->clients_.end()) {
@@ -92,10 +104,29 @@ void I2CSnifferComponent::cleanup() {
     }
 }
 
-void I2CSnifferComponent::read() {
+void I2CSnifferComponent::read()
+{
+    if(this->i2c_status_ == I2C_IDLE)
+    {
+        if(this->buffer_poi_w_ == this->buffer_poi_r_)//There is nothing to say
+            return;
 
-    // TODO: Add the real stuff from https://github.com/WhitehawkTailor/I2C-sniffer/blob/main/main.cpp here
-
+        uint16_t pw = this->buffer_poi_w_;
+        // TODO: Change to the socket clients
+        // Serial.printf("\nSCL up: %d SDA up: %d SDA down: %d false start: %d\n", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_);
+        for(int i=this->buffer_poi_r_; i< pw; i++)
+        {
+        //     Serial.write(this->data_buffer_[i]);
+            this->buffer_poi_r_++;		
+        }
+        
+        //if there is no I2C action in progress and there wasn't during the Serial.print then buffer was printed out completly and can be reset.
+        if(this->i2c_status_ == I2C_IDLE && pw == this->buffer_poi_w_)
+        {
+            this->buffer_poi_w_ =0;
+            this->buffer_poi_r_ =0;
+        }	
+    }
 
 
 
@@ -175,26 +206,118 @@ void I2CSnifferComponent::empty_sockets() {
     }
 }
 
-// void I2CSnifferComponent::write() {
-//     uint8_t buf[128];
-//     ssize_t read;
-//     for (Client &client : this->clients_) {
-//         if (client.disconnected)
-//             continue;
+void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferComponent *sniffer)
+{
+    sniffer->scl_up_cnt_++;
 
-//         while ((read = client.socket->read(&buf, sizeof(buf))) > 0)
-//             this->stream_->write_array(buf, read);
+    //is it a false trigger?
+    if(sniffer->i2c_status_==I2C_IDLE)
+    {
+        sniffer->false_start_++;
+        //return;  //this is not clear why do we have so many false START
+    }
 
-//         if (read == 0 || errno == ECONNRESET) {
-//             ESP_LOGD(TAG, "Client %s disconnected", client.identifier.c_str());
-//             client.disconnected = true;
-//         } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
-//             // Expected if the (TCP) receive buffer is empty, nothing to do.
-//         } else {
-//             ESP_LOGW(TAG, "Failed to read from client %s with error %d!", client.identifier.c_str(), errno);
-//         }
-//     }
-// }
+
+    //get the value from SDA
+    sniffer->i2c_bit_c_ =  sniffer->sda_pin_->digital_read();
+    // sniffer->i2c_bit_c_ =  digitalRead(PIN_SDA);
+
+    //decide wherewe are and what to do with incoming data
+    sniffer->i2c_case_ = 0;//normal case
+
+    if(sniffer->bit_count_==8)//ACK case
+        sniffer->i2c_case_ = 1;
+
+    if(sniffer->bit_count_==7 && sniffer->byte_count_==0 )// R/W if the first address byte
+        sniffer->i2c_case_ = 2;
+
+    sniffer->bit_count_++;
+
+    switch (sniffer->i2c_case_)
+    {
+        case 0: //normal case
+            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '0' + sniffer->i2c_bit_c_;//48
+            break;
+        case 1://ACK
+            if(sniffer->i2c_bit_c_)//1 NACK SDA HIGH
+            {
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '-';//45
+            }
+            else//0 ACK SDA LOW
+            {
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '+';//43
+            }	
+            sniffer->byte_count_++;
+            sniffer->bit_count_=0;
+            break;
+        case 2:
+            if(sniffer->i2c_bit_c_)
+            {
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'R';//82
+            }
+            else
+            {
+                sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'W';//87
+            }
+        break;
+    }
+}
+
+void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer)
+{
+    //make sure that the SDA is in stable state
+    do
+    {
+        sniffer->i2c_bit_d_ = sniffer->sda_pin_->digital_read();
+        sniffer->i2c_bit_d2_ = sniffer->sda_pin_->digital_read();
+    } while (sniffer->i2c_bit_d_ != sniffer->i2c_bit_d2_);
+
+    //sniffer->i2c_bit_d_ =  digitalRead(PIN_SDA);
+
+    if(sniffer->i2c_bit_d_)//RISING if SDA is HIGH (1)
+    {
+        
+        sniffer->i2c_clk_ = sniffer->scl_pin_->digital_read();
+        if(sniffer->i2c_status_ =! I2C_IDLE && sniffer->i2c_clk_ == 1)//If SCL still HIGH then it is a STOP sign
+        {			
+            //sniffer->i2c_status_ = I2C_STOP;
+            sniffer->i2c_status_ = I2C_IDLE;
+            sniffer->bit_count_ = 0;
+            sniffer->byte_count_ = 0;
+            sniffer->buffer_poi_w_--;
+            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 's';//115
+            sniffer->data_buffer_[sniffer->buffer_poi_w_++] = '\n'; //10
+        }
+        sniffer->sda_up_cnt_++;
+    }
+    else //FALLING if SDA is LOW
+    {
+        
+        sniffer->i2c_clk_ = sniffer->scl_pin_->digital_read();
+        if(sniffer->i2c_status_ == I2C_IDLE && sniffer->i2c_clk_)//If SCL still HIGH than this is a START
+        {
+        sniffer->i2c_status_ = I2C_TRX;
+        //sniffer->last_start_millis_ = millis();//takes too long in an interrupt handler and caused timeout panic and CPU restart
+        sniffer->bit_count_ = 0;
+        sniffer->byte_count_ = 0;
+        sniffer->data_buffer_[sniffer->buffer_poi_w_++] = 'S';//83 STOP
+        //sniffer->i2c_status_ = START;		
+        }
+        sniffer->sda_down_cnt_++;
+    }
+}
+
+void I2CSnifferComponent::reset_i2c_variable()
+{
+    this->i2c_status_ = I2C_IDLE;
+    this->buffer_poi_w_= 0;
+    this->buffer_poi_r_= 0;
+    this->bit_count_ = 0;
+    this->false_start_ = 0;
+}
 
 I2CSnifferComponent::Client::Client(std::unique_ptr<esphome::socket::Socket> socket, std::string identifier, size_t position)
     : socket(std::move(socket)), identifier{identifier}, position{position} {}
+
+}  // namespace i2c_sniffer
+}  // namespace esphome

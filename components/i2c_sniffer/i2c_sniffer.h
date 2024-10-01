@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esphome/core/component.h"
+#include "esphome/core/hal.h"
 #include "esphome/components/socket/socket.h"
 
 // #ifdef USE_BINARY_SENSOR
@@ -10,17 +11,23 @@
 // #include "esphome/components/sensor/sensor.h"
 // #endif
 
+#include <Arduino.h>
+
 #include <memory>
 #include <string>
 #include <vector>
 
+#define I2C_IDLE 0
+#define I2C_TRX 2
+
+namespace esphome {
+namespace i2c_sniffer {
+
 class I2CSnifferComponent : public esphome::Component {
     public:
         I2CSnifferComponent() = default;
-        // explicit I2CSnifferComponent(esphome::uart::UARTComponent *stream) : stream_{stream} {}
-        // void set_uart_parent(esphome::uart::UARTComponent *parent) { this->stream_ = parent; }
-        void set_sda_pin(uint8_t sda_pin) { sda_pin_ = sda_pin; }
-        void set_scl_pin(uint8_t scl_pin) { scl_pin_ = scl_pin; }
+        void set_sda_pin(esphome::InternalGPIOPin *sda_pin) { sda_pin_ = sda_pin; }
+        void set_scl_pin(esphome::InternalGPIOPin *scl_pin) { scl_pin_ = scl_pin; }
         void set_buffer_size(size_t size) { this->buf_size_ = size; }
         void set_port(uint16_t port) { this->port_ = port; }
 
@@ -46,11 +53,12 @@ class I2CSnifferComponent : public esphome::Component {
         void read();
         void flush();
         void empty_sockets();
-        // void write();
 
-        uint8_t sda_pin_;
-        uint8_t scl_pin_;
+        // I2C Specific
+        esphome::InternalGPIOPin *sda_pin_{nullptr};
+        esphome::InternalGPIOPin *scl_pin_{nullptr};
 
+        // Serial stream specific
         size_t buf_index(size_t pos) { return pos & (this->buf_size_ - 1); }
         /// Return the number of consecutive elements that are ahead of @p pos in memory.
         size_t buf_ahead(size_t pos) { return (pos | (this->buf_size_ - 1)) - pos + 1; }
@@ -64,9 +72,33 @@ class I2CSnifferComponent : public esphome::Component {
             size_t position{0};
         };
 
-        // esphome::uart::UARTComponent *stream_{nullptr};
         uint16_t port_;
         size_t buf_size_;
+
+        // Sniffer specific
+        byte i2c_status_ = I2C_IDLE;            //Status of the I2C BUS
+        uint32_t last_start_millis_ = 0;        //stoe the last time
+        byte data_buffer_[9600];                //Array for storing data of the I2C communication
+        uint16_t buffer_poi_w_ = 0;             //points to the first empty position in the dataBufer to write
+        uint16_t buffer_poi_r_ = 0;             //points to the position where to start read from
+        byte bit_count_ = 0;                    //counter of bit appeared on the BUS
+        uint16_t byte_count_ = 0;               //counter of bytes were writen in one communication.
+        byte i2c_bit_d_ = 0;                    //Container of the actual SDA bit
+        byte i2c_bit_d2_ = 0;                   //Container of the actual SDA bit
+        byte i2c_bit_c_ = 0;                    //Container of the actual SDA bit
+        byte i2c_clk_ = 0;                      //Container of the actual SCL bit
+        byte i2c_ack_ = 0;                      //Container of the last ACK value
+        byte i2c_case_ = 0;                     //Container of the last ACK value
+        uint16_t false_start_ = 0;              //Counter of false start events
+        //byte resp_count_ =  0;                  //Auxiliary variable to help detect next byte instead of STOP these variables just for statistic reasons
+        uint16_t scl_up_cnt_ = 0;               //Auxiliary variable to count rising SCL
+        uint16_t sda_up_cnt_ = 0;               //Auxiliary variable to count rising SDA
+        uint16_t sda_down_cnt_ = 0;             //Auxiliary variable to count falling SDA
+
+        static void IRAM_ATTR i2c_trigger_on_raising_scl(I2CSnifferComponent *sniffer);
+        static void IRAM_ATTR i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer);
+        void reset_i2c_variable();
+
 
 #ifdef USE_BINARY_SENSOR
         esphome::binary_sensor::BinarySensor *connected_sensor_;
@@ -82,3 +114,6 @@ class I2CSnifferComponent : public esphome::Component {
         std::unique_ptr<esphome::socket::Socket> socket_{};
         std::vector<Client> clients_{};
 };
+
+}  // namespace i2c_sniffer
+}  // namespace esphome

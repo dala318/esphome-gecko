@@ -33,13 +33,21 @@ esphome:
   comment: "${device_description}"
 
 external_components:
-# - source: github://dala318/esphome-gecko:
-- source:
+  # - source: github://dala318/esphome-gecko
+  - source:
       type: local
-      path: my_dev_components
+      path: components
 
 i2c_sniffer:
-  sda: GPIO11
-  scl: GPIO12
+  sda:
+    number: GPIO14
+    mode:
+      input: true
+      pullup: true
+  scl:
+    number: GPIO15
+    mode:
+      input: true
+      pullup: true
   port: 6638
   buffer_size: 256
