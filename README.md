@@ -10,3 +10,7 @@ For now it's an all-in-one package, but if it makes sense and interest is to wid
 # Declaration of copy & modify code
 
 * Source code for [ADS1115 Sensor](https://esphome.io/components/sensor/ads1115.html)
+
+# Experimental I2C sniffer
+
+[Read more here](components/i2c_sniffer/README.md) for more about it. It compiles but have not been able to test it yet.
