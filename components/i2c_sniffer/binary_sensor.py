@@ -5,7 +5,7 @@ from esphome.const import (
     DEVICE_CLASS_CONNECTIVITY,
     ENTITY_CATEGORY_DIAGNOSTIC,
 )
-from . import ns, I2CSnifferComponent, CONF_I2C_SNIFFER
+from . import I2CSnifferComponent, CONF_I2C_SNIFFER
 
 CONF_CONNECTED = "connected"
 

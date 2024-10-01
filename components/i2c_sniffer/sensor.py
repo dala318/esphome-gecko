@@ -5,7 +5,7 @@ from esphome.const import (
     STATE_CLASS_MEASUREMENT,
     ENTITY_CATEGORY_DIAGNOSTIC,
 )
-from . import ns, I2CSnifferComponent, CONF_I2C_SNIFFER
+from . import I2CSnifferComponent, CONF_I2C_SNIFFER
 
 CONF_CONNECTION_COUNT = "connection_count"
 

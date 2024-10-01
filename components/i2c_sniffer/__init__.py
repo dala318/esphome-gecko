@@ -9,7 +9,9 @@ DEPENDENCIES = ["network"]
 
 MULTI_CONF = True
 
-i2c_sniffer_ns = cg.esphome_ns.namespace("i2c_sniffer")
+CONF_I2C_SNIFFER = "i2c_sniffer"
+
+i2c_sniffer_ns = cg.esphome_ns.namespace(CONF_I2C_SNIFFER)
 I2CSnifferComponent = i2c_sniffer_ns.class_("I2CSnifferComponent", cg.Component)
 
 
