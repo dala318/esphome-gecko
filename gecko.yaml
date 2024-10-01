@@ -33,14 +33,19 @@ esphome:
   comment: "${device_description}"
 
 external_components:
-- source: github://dala318/esphome-qmi8658external_components:
+- source: github://dala318/esphome-gecko:
 # - source:
 #       type: local
 #       path: my_dev_components
 
-# i2c:
-#   sda: GPIO11
-#   scl: GPIO12
+i2c:
+  id: i2c_bus
+  sda: GPIO11
+  scl: GPIO12
+
+gecko:
+  i2c_id: i2c_bus
+  address: 0x48
 
 sensor:
   - platform: gecko
