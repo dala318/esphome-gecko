@@ -1,0 +1,45 @@
+substitutions:
+  devicename: "i2c-sniffer"
+  friendly_name: "Generic I2C sniffer "
+  device_description: "Sniffs I2C SDA and SCL pins for data"
+  
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+captive_portal:
+
+logger:
+  level: DEBUG
+  baud_rate: 0 # disable logging over uart
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+
+web_server:
+
+esphome:
+  name: ${devicename}
+  friendly_name: ${friendly_name}
+  comment: "${device_description}"
+
+external_components:
+# - source: github://dala318/esphome-gecko:
+- source:
+      type: local
+      path: my_dev_components
+
+i2c_sniffer:
+  sda: GPIO11
+  scl: GPIO12
+  port: 6638
+  buffer_size: 256
