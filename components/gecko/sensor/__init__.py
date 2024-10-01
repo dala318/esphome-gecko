@@ -14,7 +14,7 @@ from .. import gecko_ns, GeckoComponent, CONF_GECKO_ID
 
 # AUTO_LOAD = ["voltage_sampler"]
 DEPENDENCIES = ["gecko"]
-
+CONF_SENSOR_ID = "sensor_id"
 
 GeckoSensor = gecko_ns.class_(
     "GeckoSensor", sensor.Sensor, cg.PollingComponent #, voltage_sampler.VoltageSampler
@@ -27,6 +27,11 @@ CONFIG_SCHEMA = (
         # accuracy_decimals=3,
         # device_class=DEVICE_CLASS_VOLTAGE,
         state_class=STATE_CLASS_MEASUREMENT,
+    )
+    .extend(  # Temporary stuff to make unique sensors
+        {
+            cv.Required(CONF_SENSOR_ID): cv.string,
+        }
     )
     .extend(
         {
@@ -42,6 +47,8 @@ async def to_code(config):
     await sensor.register_sensor(var, config)
     await cg.register_component(var, config)
     await cg.register_parented(var, config[CONF_GECKO_ID])
+
+    cg.add(var.set_sensor_id(config[CONF_SENSOR_ID]))
 
     # cg.add(var.set_multiplexer(config[CONF_MULTIPLEXER]))
     # cg.add(var.set_gain(config[CONF_GAIN]))

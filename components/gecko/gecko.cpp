@@ -102,7 +102,7 @@ float GeckoComponent::request_measurement() {
     auto signed_conversion = static_cast<int16_t>(raw_conversion);
 
     float millivolts;
-    float divider = (resolution == GECKO_16_BITS) ? 32768.0f : 2048.0f;
+    float divider = 1.0; //(resolution == GECKO_16_BITS) ? 32768.0f : 2048.0f;
     millivolts = (signed_conversion * 6144) / divider;
 
     this->status_clear_warning();

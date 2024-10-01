@@ -33,15 +33,15 @@ esphome:
   comment: "${device_description}"
 
 external_components:
-- source: github://dala318/esphome-gecko:
-# - source:
-#       type: local
-#       path: my_dev_components
+  # - source: github://dala318/esphome-gecko
+  - source:
+      type: local
+      path: components
 
 i2c:
   id: i2c_bus
-  sda: GPIO11
-  scl: GPIO12
+  sda: GPIO14
+  scl: GPIO15
 
 gecko:
   i2c_id: i2c_bus
@@ -49,9 +49,7 @@ gecko:
 
 sensor:
   - platform: gecko
-    interrupt_pin: GPIO13
-    temperature:
-      name: "Spa Temperature"
-      # filters:
-      #   - offset: 34.0
+    id: temp
+    name: Temperature
+    sensor_id: temperature  # Just some temporary stuff, to be replaced by some enum
     update_interval: 5s

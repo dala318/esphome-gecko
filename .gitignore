@@ -1,3 +1,7 @@
+# Project specific
+secrets.yaml
+.esphome/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

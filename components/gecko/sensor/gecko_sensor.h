@@ -16,19 +16,22 @@ class GeckoSensor : public sensor::Sensor,
                     public PollingComponent,
                     // public voltage_sampler::VoltageSampler,
                     public Parented<GeckoComponent> {
-  public:
-      void update() override;
-      // void set_multiplexer(GeckoMultiplexer multiplexer) { this->multiplexer_ = multiplexer; }
-      // void set_gain(GeckoGain gain) { this->gain_ = gain; }
-      // void set_resolution(GeckoResolution resolution) { this->resolution_ = resolution; }
-      float sample() override;
+    public:
+        void update() override;
+        // float sample() override;
+        float sample();
+        void dump_config() override;
+        void set_sensor_id(char* id) { this->id_ = id; }
+        
+        // void set_multiplexer(GeckoMultiplexer multiplexer) { this->multiplexer_ = multiplexer; }
+        // void set_gain(GeckoGain gain) { this->gain_ = gain; }
+        // void set_resolution(GeckoResolution resolution) { this->resolution_ = resolution; }
 
-      void dump_config() override;
-
-  protected:
-      // GeckoMultiplexer multiplexer_;
-      // GeckoGain gain_;
-      // GeckoResolution resolution_;
+    protected:
+        char* id_;
+        // GeckoMultiplexer multiplexer_;
+        // GeckoGain gain_;
+        // GeckoResolution resolution_;
 };
 
 }  // namespace gecko
