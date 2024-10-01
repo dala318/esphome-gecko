@@ -112,20 +112,18 @@ void I2CSnifferComponent::read()
             return;
 
         uint16_t pw = this->buffer_poi_w_;
-uint8_t read_data[9600];
+        uint8_t read_data[9600];
         uint16_t read_data_bytes = 0;
         std::string read_data_str = "";
         ESP_LOGD(TAG, "\nSCL up: %d SDA up: %d SDA down: %d false start: %d\n", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_cnt_);
         while(this->buffer_poi_r_ < pw)
         {
-        // TODO: Change to the socket clients
-            // Serial.write(this->data_buffer_[i]);
             read_data[read_data_bytes] = this->data_buffer_[this->buffer_poi_r_];
             read_data_str += this->data_buffer_[this->buffer_poi_r_];
             this->buffer_poi_r_++;
             read_data_bytes++;
         }
-        
+
         //if there is no I2C action in progress and there wasn't during the Serial.print then buffer was printed out completly and can be reset.
         if(this->i2c_status_ == I2C_IDLE && pw == this->buffer_poi_w_)
         {
@@ -137,41 +135,38 @@ uint8_t read_data[9600];
         {
             ESP_LOGD(TAG, "Read %d bytes data", read_data_bytes);
             ESP_LOGD(TAG, ">> %s", read_data_str);
-            // for (Client &client : this->clients_) {
-            //     if (client.position < this->buf_tail_) {
-            //         ESP_LOGW(TAG, "Dropped %u pending bytes for client %s", this->buf_tail_ - client.position, client.identifier.c_str());
-            //         client.position = this->buf_tail_;
-            //     }
-            // }
-        }
-        
+
+            size_t len = 0;
+            size_t read_from = 0;
+            int available;
+            // while ((available = this->stream_->available()) > 0)
+            while ((available = read_data_bytes - read_from) > 0)
+            {
+                size_t free = this->buf_size_ - (this->buf_head_ - this->buf_tail_);
+                if (free == 0) {
+                    // Only overwrite if nothing has been added yet, otherwise give flush() a chance to empty the buffer first.
+                    if (len > 0)
+                        return;
+                    ESP_LOGE(TAG, "Incoming bytes available, but outgoing buffer is full: stream will be corrupted!");
+                    free = std::min<size_t>(available, this->buf_size_);
+                    this->buf_tail_ += free;
+                    for (Client &client : this->clients_) {
+                        if (client.position < this->buf_tail_) {
+                            ESP_LOGW(TAG, "Dropped %u pending bytes for client %s", this->buf_tail_ - client.position, client.identifier.c_str());
+                            client.position = this->buf_tail_;
+                        }
+                    }
+                }
+                // Fill all available contiguous space in the ring buffer.
+                len = std::min<size_t>(available, std::min<size_t>(this->buf_ahead(this->buf_head_), free));
+                for(int i = 0; i < len; i++)
+                {
+                    this->buf_[this->buf_index(this->buf_head_) + i] = read_data[read_from++];
+                }
+                this->buf_head_ += len;
+            }
+        }        
     }
-
-
-
-    // size_t len = 0;
-    // int available;
-    // while ((available = this->stream_->available()) > 0) {
-    //     size_t free = this->buf_size_ - (this->buf_head_ - this->buf_tail_);
-    //     if (free == 0) {
-    //         // Only overwrite if nothing has been added yet, otherwise give flush() a chance to empty the buffer first.
-    //         if (len > 0)
-    //             return;
-    //         ESP_LOGE(TAG, "Incoming bytes available, but outgoing buffer is full: stream will be corrupted!");
-    //         free = std::min<size_t>(available, this->buf_size_);
-    //         this->buf_tail_ += free;
-    //         for (Client &client : this->clients_) {
-    //             if (client.position < this->buf_tail_) {
-    //                 ESP_LOGW(TAG, "Dropped %u pending bytes for client %s", this->buf_tail_ - client.position, client.identifier.c_str());
-    //                 client.position = this->buf_tail_;
-    //             }
-    //         }
-    //     }
-    //     // Fill all available contiguous space in the ring buffer.
-    //     len = std::min<size_t>(available, std::min<size_t>(this->buf_ahead(this->buf_head_), free));
-    //     this->stream_->read_array(&this->buf_[this->buf_index(this->buf_head_)], len);
-    //     this->buf_head_ += len;
-    // }
 }
 
 void I2CSnifferComponent::flush() {
@@ -212,7 +207,20 @@ void I2CSnifferComponent::empty_sockets() {
             continue;
 
         // Just empty the incomming buffer in case data was sent to ESP
-        while ((read = client.socket->read(&buf, sizeof(buf))) > 0) {}
+        while ((read = client.socket->read(&buf, sizeof(buf))) > 0)
+        {
+            // TODO: Remove, using this for now to try to fake data from i2c
+            ESP_LOGD(TAG, "Faking data");
+            this->data_buffer_[this->buffer_poi_w_++] = '0';
+            this->data_buffer_[this->buffer_poi_w_++] = '1';
+            this->data_buffer_[this->buffer_poi_w_++] = '2';
+            this->data_buffer_[this->buffer_poi_w_++] = '3';
+            this->data_buffer_[this->buffer_poi_w_++] = '4';
+            this->data_buffer_[this->buffer_poi_w_++] = '5';
+            this->data_buffer_[this->buffer_poi_w_++] = '6';
+            this->data_buffer_[this->buffer_poi_w_++] = '7';
+            this->data_buffer_[this->buffer_poi_w_++] = '8';
+        }
 
         if (read == 0 || errno == ECONNRESET) {
             ESP_LOGD(TAG, "Client %s disconnected", client.identifier.c_str());
@@ -230,9 +238,9 @@ void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferCompone
     sniffer->scl_up_cnt_++;
 
     //is it a false trigger?
-    if(sniffer->i2c_status_==I2C_IDLE)
+    if(sniffer->i2c_status_ == I2C_IDLE)
     {
-        sniffer->false_start_++;
+        sniffer->false_start_cnt_++;
         //return;  //this is not clear why do we have so many false START
     }
 
@@ -325,13 +333,13 @@ void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_change_sda(I2CSnifferComponen
     }
 }
 
-void I2CSnifferComponent::reset_i2c_variable()
+void I2CSnifferComponent::reset_i2c_variables()
 {
     this->i2c_status_ = I2C_IDLE;
     this->buffer_poi_w_= 0;
     this->buffer_poi_r_= 0;
     this->bit_count_ = 0;
-    this->false_start_ = 0;
+    this->false_start_cnt_ = 0;
 }
 
 I2CSnifferComponent::Client::Client(std::unique_ptr<esphome::socket::Socket> socket, std::string identifier, size_t position)
