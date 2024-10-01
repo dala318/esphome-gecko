@@ -94,7 +94,7 @@ void I2CSnifferComponent::cleanup() {
 
 void I2CSnifferComponent::read() {
 
-
+    // TODO: Add the real stuff from https://github.com/WhitehawkTailor/I2C-sniffer/blob/main/main.cpp here
 
 
 
@@ -107,7 +107,6 @@ void I2CSnifferComponent::read() {
     //         // Only overwrite if nothing has been added yet, otherwise give flush() a chance to empty the buffer first.
     //         if (len > 0)
     //             return;
-
     //         ESP_LOGE(TAG, "Incoming bytes available, but outgoing buffer is full: stream will be corrupted!");
     //         free = std::min<size_t>(available, this->buf_size_);
     //         this->buf_tail_ += free;
@@ -118,7 +117,6 @@ void I2CSnifferComponent::read() {
     //             }
     //         }
     //     }
-
     //     // Fill all available contiguous space in the ring buffer.
     //     len = std::min<size_t>(available, std::min<size_t>(this->buf_ahead(this->buf_head_), free));
     //     this->stream_->read_array(&this->buf_[this->buf_index(this->buf_head_)], len);
