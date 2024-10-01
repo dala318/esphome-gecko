@@ -51,3 +51,13 @@ i2c_sniffer:
       pullup: true
   port: 6638
   buffer_size: 256
+
+binary_sensor:
+  - platform: i2c_sniffer
+    connected:
+      name: Connected
+
+sensor:
+  - platform: i2c_sniffer
+    connection_count:
+      name: Number of connections
