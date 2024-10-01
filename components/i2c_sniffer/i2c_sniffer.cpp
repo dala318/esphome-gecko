@@ -32,7 +32,7 @@ void I2CSnifferComponent::setup() {
     this->socket_->listen(8);
 
     // sniffer specific
-    this->reset_i2c_variable();
+    this->reset_i2c_variables();
     this->scl_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_raising_scl, this, gpio::INTERRUPT_RISING_EDGE);
     this->sda_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_change_sda, this, gpio::INTERRUPT_ANY_EDGE);
 
@@ -112,12 +112,18 @@ void I2CSnifferComponent::read()
             return;
 
         uint16_t pw = this->buffer_poi_w_;
-        // TODO: Change to the socket clients
-        // Serial.printf("\nSCL up: %d SDA up: %d SDA down: %d false start: %d\n", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_);
-        for(int i=this->buffer_poi_r_; i< pw; i++)
+uint8_t read_data[9600];
+        uint16_t read_data_bytes = 0;
+        std::string read_data_str = "";
+        ESP_LOGD(TAG, "\nSCL up: %d SDA up: %d SDA down: %d false start: %d\n", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_cnt_);
+        while(this->buffer_poi_r_ < pw)
         {
-        //     Serial.write(this->data_buffer_[i]);
-            this->buffer_poi_r_++;		
+        // TODO: Change to the socket clients
+            // Serial.write(this->data_buffer_[i]);
+            read_data[read_data_bytes] = this->data_buffer_[this->buffer_poi_r_];
+            read_data_str += this->data_buffer_[this->buffer_poi_r_];
+            this->buffer_poi_r_++;
+            read_data_bytes++;
         }
         
         //if there is no I2C action in progress and there wasn't during the Serial.print then buffer was printed out completly and can be reset.
@@ -126,6 +132,19 @@ void I2CSnifferComponent::read()
             this->buffer_poi_w_ = 0;
             this->buffer_poi_r_ = 0;
         }	
+
+        if (read_data_bytes > 0)
+        {
+            ESP_LOGD(TAG, "Read %d bytes data", read_data_bytes);
+            ESP_LOGD(TAG, ">> %s", read_data_str);
+            // for (Client &client : this->clients_) {
+            //     if (client.position < this->buf_tail_) {
+            //         ESP_LOGW(TAG, "Dropped %u pending bytes for client %s", this->buf_tail_ - client.position, client.identifier.c_str());
+            //         client.position = this->buf_tail_;
+            //     }
+            // }
+        }
+        
     }
 
 
