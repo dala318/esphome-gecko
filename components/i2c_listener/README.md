@@ -1,10 +1,11 @@
 # I2C Listener
-A component to sniff I2C data from connacted bus
+A component to listen to I2C data from connected bus
 
-A fusion of the following code-bases
+A fusion of the following code-bases and discussions
 
 * [ESP Home Stream Server](https://github.com/oxan/esphome-stream-server) by @oxan
-* [I2C Listener](https://github.com/WhitehawkTailor/I2C-listener) by @WhitehawkTailor
+* [I2C Listener](https://forum.arduino.cc/t/esp32-i2c-sniffer-issue/1135004)
+* [I2C Callback](https://community.home-assistant.io/t/issues-configuring-i2c-as-slave-with-esphome-and-how-i-solved-them/774238)
 
 # Usage
 
@@ -15,9 +16,14 @@ external_components:
 #       type: local
 #       path: my_dev_components
 
+i2c:
+  id: i2c_bus
+  sda: GPIO14
+  scl: GPIO15
+
 i2c_listener:
-  sda: GPIO11
-  scl: GPIO12
+  i2c_id: i2c_bus
+  address: 0x00
   port: 6638
   buffer_size: 256
 ```
