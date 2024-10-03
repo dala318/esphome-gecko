@@ -34,4 +34,9 @@ sensor:
   - platform: i2c_sniffer
     connection_count:
       name: Number of connections
+
+text_sensor:    # Not working, writing result to it causes stack overflow?
+  - platform: i2c_sniffer
+    dump_data:
+      name: Last data from I2C
 ```

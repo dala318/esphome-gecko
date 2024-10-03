@@ -10,6 +10,9 @@
 #ifdef USE_SENSOR
 #include "esphome/components/sensor/sensor.h"
 #endif
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 
 #include <Arduino.h>
 
@@ -37,6 +40,9 @@ class I2CSnifferComponent : public esphome::Component {
 #ifdef USE_SENSOR
         void set_connection_count_sensor(esphome::sensor::Sensor *connection_count) { this->connection_count_sensor_ = connection_count; }
 #endif
+#ifdef USE_TEXT_SENSOR
+        void set_dump_data_sensor(esphome::text_sensor::TextSensor *dump_data) { this->dump_data_sensor_ = dump_data; }
+#endif
 
         void setup() override;
         void loop() override;
@@ -52,6 +58,7 @@ class I2CSnifferComponent : public esphome::Component {
         void cleanup();
         void read();
         void flush();
+        void local_output();
         void empty_sockets();
 
         // I2C Specific
@@ -79,6 +86,8 @@ class I2CSnifferComponent : public esphome::Component {
         uint8_t i2c_status_ = I2C_IDLE;         // Status of the I2C BUS
         // uint32_t last_start_millis_ = 0;        // Store the last time
         uint8_t data_buffer_[9600];             // Array for storing data of the I2C communication
+        std::string read_str_ = "";             // String for storing data of the I2C communication
+        uint16_t read_data_bytes_ = 0;          // Number of bytes read from the I2C communication
         uint16_t buffer_poi_w_ = 0;             // Points to the first empty position in the dataBufer to write
         uint16_t buffer_poi_r_ = 0;             // Points to the position where to start read from
         uint8_t bit_count_ = 0;                 // Counter of bit appeared on the BUS
@@ -90,10 +99,11 @@ class I2CSnifferComponent : public esphome::Component {
         // uint8_t i2c_ack_ = 0;                   // Container of the last ACK value
         // uint8_t i2c_case_ = 0;                  // Container of the last ACK value
         // uint8_t resp_count_ = 0;                // Auxiliary variable to help detect next byte instead of STOP these variables just for statistic reasons
-        uint16_t false_start_cnt_ = 0;          // Auxiliary variable to count false start events
         uint16_t scl_up_cnt_ = 0;               // Auxiliary variable to count rising SCL
         uint16_t sda_up_cnt_ = 0;               // Auxiliary variable to count rising SDA
         uint16_t sda_down_cnt_ = 0;             // Auxiliary variable to count falling SDA
+        uint16_t false_start_cnt_ = 0;          // Auxiliary variable to count false start events
+
 
         static void IRAM_ATTR i2c_trigger_on_raising_scl(I2CSnifferComponent *sniffer);
         static void IRAM_ATTR i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer);
@@ -105,6 +115,9 @@ class I2CSnifferComponent : public esphome::Component {
 #endif
 #ifdef USE_SENSOR
         esphome::sensor::Sensor *connection_count_sensor_;
+#endif
+#ifdef USE_TEXT_SENSOR
+        esphome::text_sensor::TextSensor *dump_data_sensor_;
 #endif
 
         std::unique_ptr<uint8_t []> buf_{};
