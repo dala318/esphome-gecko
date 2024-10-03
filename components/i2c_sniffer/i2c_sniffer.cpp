@@ -14,7 +14,7 @@ namespace i2c_sniffer {
 static const char *TAG = "i2c_sniffer";
 
 void I2CSnifferComponent::setup() {
-    ESP_LOGCONFIG(TAG, "Setting up stream server...");
+    ESP_LOGCONFIG(TAG, "Setting up I2C Sniffer...");
 
     // The make_unique() wrapper doesn't like arrays, so initialize the unique_ptr directly.
     this->buf_ = std::unique_ptr<uint8_t[]>{new uint8_t[this->buf_size_]};
@@ -31,7 +31,7 @@ void I2CSnifferComponent::setup() {
     this->socket_->bind(reinterpret_cast<struct sockaddr *>(&bind_addr), bind_addrlen);
     this->socket_->listen(8);
 
-    // sniffer specific
+    // Sniffer specific
     this->reset_i2c_variables();
     this->scl_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_raising_scl, this, gpio::INTERRUPT_RISING_EDGE);
     this->sda_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_change_sda, this, gpio::INTERRUPT_ANY_EDGE);
