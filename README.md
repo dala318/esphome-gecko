@@ -10,7 +10,7 @@ For now it's an all-in-one package, but if it makes sense and interest is to wid
 ## I2C sniffers (experimental)
 
 * [GPIO pin decoder](components/i2c_sniffer/README.md), low-level pin level shange. It compiles but have not been able to test it for real yet.
-* [I2C bus reader](components/i2c_listener/README.md), Wire based (passive???) listner. It compiles but have not been able to test it for real yet.
+* [I2C bus reader](components/i2c_listener/README.md), Wire based (passive???) listner. It does not really compile yet, may have to abandon the callback since it requires a static method and data to be fed back to the class instance.
 
 ## Code used as template and inspiration
 
