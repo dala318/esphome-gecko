@@ -45,7 +45,7 @@ i2c:
 
 gecko:
   i2c_id: i2c_bus
-  address: 0x48  # Just a rendom value for now
+  address: 0x48  # Just a random value for now
 
 sensor:
   - platform: gecko
