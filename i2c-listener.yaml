@@ -1,6 +1,6 @@
 substitutions:
-  devicename: "i2c-sniffer"
-  friendly_name: "Generic I2C sniffer "
+  devicename: "i2c-listener"
+  friendly_name: "Generic I2C listener "
   device_description: "Sniffs I2C SDA and SCL pins for data"
   
 esp32:
@@ -42,31 +42,28 @@ external_components:
       type: local
       path: components
 
-i2c_sniffer:
-  sda:
-    number: GPIO14
-    mode:
-      input: true
-      pullup: true
-  scl:
-    number: GPIO15
-    mode:
-      input: true
-      pullup: true
+i2c:
+  id: i2c_bus
+  sda: GPIO14
+  scl: GPIO15
+
+i2c_listener:
+  i2c_id: i2c_bus
+  address: 0x00
   port: 6638
   buffer_size: 256
 
 binary_sensor:
-  - platform: i2c_sniffer
+  - platform: i2c_listener
     connected:
       name: Connected
 
 sensor:
-  - platform: i2c_sniffer
+  - platform: i2c_listener
     connection_count:
       name: Number of connections
 
 # text_sensor:
-#   - platform: i2c_sniffer
+#   - platform: i2c_listener
 #     dump_data:
 #       name: Last data from I2C

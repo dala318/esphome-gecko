@@ -7,9 +7,10 @@ Relative to [GeckoLib](https://github.com/gazoodle/geckolib) but instead of inte
 
 For now it's an all-in-one package, but if it makes sense and interest is to widen the usage I'm upen to split it to to a domain independent interface library and an ESPHome specific usage.
 
-## I2C sniffer (experimental)
+## I2C sniffers (experimental)
 
-[Read more here](components/i2c_sniffer/README.md) for more about it. It compiles but have not been able to test it yet.
+* [GPIO pin decoder](components/i2c_sniffer/README.md), low-level pin level shange. It compiles but have not been able to test it for real yet.
+* [I2C bus reader](components/i2c_listener/README.md), Wire based (passive???) listner. It does not really compile yet, may have to abandon the callback since it requires a static method and data to be fed back to the class instance.
 
 ## Code used as template and inspiration
 

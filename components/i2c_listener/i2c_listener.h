@@ -1,7 +1,7 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "esphome/core/hal.h"
+#include "esphome/components/i2c/i2c.h"
 #include "esphome/components/socket/socket.h"
 
 #ifdef USE_BINARY_SENSOR
@@ -15,6 +15,7 @@
 #endif
 
 #include <Arduino.h>
+#include <Wire.h>
 
 #include <memory>
 #include <string>
@@ -24,13 +25,13 @@
 #define I2C_TRX 2
 
 namespace esphome {
-namespace i2c_sniffer {
+namespace i2c_listener {
 
-class I2CSnifferComponent : public esphome::Component {
+class I2CListenerComponent : public esphome::Component, public i2c::I2CDevice {
     public:
-        I2CSnifferComponent() = default;
-        void set_sda_pin(esphome::InternalGPIOPin *sda_pin) { sda_pin_ = sda_pin; }
-        void set_scl_pin(esphome::InternalGPIOPin *scl_pin) { scl_pin_ = scl_pin; }
+        I2CListenerComponent() = default;
+        // void set_sda_pin(esphome::InternalGPIOPin *sda_pin) { sda_pin_ = sda_pin; }
+        // void set_scl_pin(esphome::InternalGPIOPin *scl_pin) { scl_pin_ = scl_pin; }
         void set_buffer_size(size_t size) { this->buf_size_ = size; }
         void set_port(uint16_t port) { this->port_ = port; }
 
@@ -53,6 +54,8 @@ class I2CSnifferComponent : public esphome::Component {
 
     protected:
         void publish_sensor();
+        static void receive_callback(int byte_count);
+        void receive_handler(int byte_count);
 
         void accept();
         void cleanup();
@@ -61,9 +64,8 @@ class I2CSnifferComponent : public esphome::Component {
         void local_output();
         void empty_sockets();
 
-        // I2C Specific
-        esphome::InternalGPIOPin *sda_pin_{nullptr};
-        esphome::InternalGPIOPin *scl_pin_{nullptr};
+        // Static pointer to the class instance
+        static I2CListenerComponent *instance_;
 
         // Serial stream specific
         size_t buf_index(size_t pos) { return pos & (this->buf_size_ - 1); }
@@ -82,34 +84,6 @@ class I2CSnifferComponent : public esphome::Component {
         uint16_t port_;
         size_t buf_size_;
 
-        // Sniffer specific
-        uint8_t i2c_status_ = I2C_IDLE;         // Status of the I2C BUS
-        // uint32_t last_start_millis_ = 0;        // Store the last time
-        uint8_t data_buffer_[9600];             // Array for storing data of the I2C communication
-        std::string read_str_ = "";             // String for storing data of the I2C communication
-        uint16_t read_data_bytes_ = 0;          // Number of bytes read from the I2C communication
-        uint16_t buffer_poi_w_ = 0;             // Points to the first empty position in the dataBufer to write
-        uint16_t buffer_poi_r_ = 0;             // Points to the position where to start read from
-        uint8_t bit_count_ = 0;                 // Counter of bit appeared on the BUS
-        uint16_t byte_count_ = 0;               // Counter of bytes were writen in one communication.
-        // uint8_t i2c_bit_d_ = 0;                 // Container of the actual SDA bit
-        // uint8_t i2c_bit_d2_ = 0;                // Container of the actual SDA bit
-        // uint8_t i2c_bit_c_ = 0;                 // Container of the actual SDA bit
-        // uint8_t i2c_clk_ = 0;                   // Container of the actual SCL bit
-        // uint8_t i2c_ack_ = 0;                   // Container of the last ACK value
-        // uint8_t i2c_case_ = 0;                  // Container of the last ACK value
-        // uint8_t resp_count_ = 0;                // Auxiliary variable to help detect next byte instead of STOP these variables just for statistic reasons
-        uint16_t scl_up_cnt_ = 0;               // Auxiliary variable to count rising SCL
-        uint16_t sda_up_cnt_ = 0;               // Auxiliary variable to count rising SDA
-        uint16_t sda_down_cnt_ = 0;             // Auxiliary variable to count falling SDA
-        uint16_t false_start_cnt_ = 0;          // Auxiliary variable to count false start events
-
-
-        static void IRAM_ATTR i2c_trigger_on_raising_scl(I2CSnifferComponent *sniffer);
-        static void IRAM_ATTR i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer);
-        void reset_i2c_variables();
-
-
 #ifdef USE_BINARY_SENSOR
         esphome::binary_sensor::BinarySensor *connected_sensor_;
 #endif
@@ -126,7 +100,20 @@ class I2CSnifferComponent : public esphome::Component {
 
         std::unique_ptr<esphome::socket::Socket> socket_{};
         std::vector<Client> clients_{};
+
+
+        // Listener specific
+        byte data_buffer_[9600];                // Array for storing data of the I2C communication
+        std::string read_str_ = "";             // String for storing data of the I2C communication
+        uint16_t read_data_bytes_ = 0;          // Number of bytes read from the I2C communication
+        uint16_t buffer_poi_w_ = 0;             // Points to the first empty position in the dataBufer to write
+        uint16_t buffer_poi_r_ = 0;             // Points to the position where to start read from
 };
 
-}  // namespace i2c_sniffer
+#ifndef I2C_LISTENER_H
+#define I2C_LISTENER_H
+I2CListenerComponent *I2CListenerComponent::instance_ = nullptr;
+#endif
+
+}  // namespace i2c_listener
 }  // namespace esphome
