@@ -21,14 +21,14 @@ class GeckoSensor : public sensor::Sensor,
         // float sample() override;
         float sample();
         void dump_config() override;
-        void set_sensor_id(char* id) { this->id_ = id; }
+        void set_register(uint16_t reg) { this->reg_ = reg; }
         
         // void set_multiplexer(GeckoMultiplexer multiplexer) { this->multiplexer_ = multiplexer; }
         // void set_gain(GeckoGain gain) { this->gain_ = gain; }
         // void set_resolution(GeckoResolution resolution) { this->resolution_ = resolution; }
 
     protected:
-        char* id_;
+        uint16_t reg_;
         // GeckoMultiplexer multiplexer_;
         // GeckoGain gain_;
         // GeckoResolution resolution_;

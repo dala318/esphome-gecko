@@ -8,7 +8,7 @@ namespace gecko {
 static const char *const TAG = "gecko.sensor";
 
 float GeckoSensor::sample() {
-    return this->parent_->request_measurement();
+    return this->parent_->request_measurement(this->reg_);
     // return this->parent_->request_measurement(this->multiplexer_, this->gain_, this->resolution_);
 }
 
@@ -22,6 +22,7 @@ void GeckoSensor::update() {
 
 void GeckoSensor::dump_config() {
     LOG_SENSOR("  ", "Gecko Sensor", this);
+    ESP_LOGCONFIG(TAG, "    Register: 0x%04X", this->reg_);
     // ESP_LOGCONFIG(TAG, "    Multiplexer: %u", this->multiplexer_);
     // ESP_LOGCONFIG(TAG, "    Gain: %u", this->gain_);
     // ESP_LOGCONFIG(TAG, "    Resolution: %u", this->resolution_);

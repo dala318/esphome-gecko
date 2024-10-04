@@ -45,11 +45,11 @@ i2c:
 
 gecko:
   i2c_id: i2c_bus
-  address: 0x48  # Just a rendom value for now
+  address: 0x48  # Just a random value for now
 
 sensor:
   - platform: gecko
     id: temp
     name: Temperature
-    sensor_id: temperature  # Just some temporary stuff, to be replaced by some enum
+    register: 0x55  # Just some temporary stuff, to be replaced by some enum
     update_interval: 5s

@@ -7,18 +7,17 @@ namespace gecko {
 
 static const char *const TAG = "gecko";
 
-static const uint8_t GECKO_REGISTER_CONVERSION = 0x00;
-static const uint8_t GECKO_REGISTER_CONFIG = 0x01;
-
-static const uint8_t GECKO_DATA_RATE_860_SPS = 0b111;  // 3300_SPS for ADS1015
+// static const uint8_t GECKO_REGISTER_CONVERSION = 0x00;
+// static const uint8_t GECKO_REGISTER_CONFIG = 0x01;
+// static const uint8_t GECKO_DATA_RATE_860_SPS = 0b111;  // 3300_SPS for ADS1015
 
 void GeckoComponent::setup() {
     ESP_LOGCONFIG(TAG, "Setting up Gecko...");
     uint16_t value;
-    if (!this->read_byte_16(GECKO_REGISTER_CONVERSION, &value)) {
-        this->mark_failed();
-        return;
-    }
+    // if (!this->read_byte_16(GECKO_REGISTER_CONVERSION, &value)) {
+    //     this->mark_failed();
+    //     return;
+    // }
 
     ESP_LOGCONFIG(TAG, "Configuring Gecko...");
 
@@ -42,7 +41,7 @@ void GeckoComponent::dump_config() {
         ESP_LOGE(TAG, "Communication with Gecko failed!");
     }
 }
-float GeckoComponent::request_measurement() {
+float GeckoComponent::request_measurement(uint16_t reg) {
     // uint16_t config = this->prev_config_;
     // // Multiplexer
     // //        0bxBBBxxxxxxxxxxxx
@@ -78,7 +77,7 @@ float GeckoComponent::request_measurement() {
     // }
 
     uint16_t raw_conversion;
-    if (!this->read_byte_16(GECKO_REGISTER_CONVERSION, &raw_conversion)) {
+    if (!this->read_byte_16(reg, &raw_conversion)) {
         this->status_set_warning();
         return NAN;
     }

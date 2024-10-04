@@ -6,11 +6,11 @@ from esphome.const import (
     # CONF_MULTIPLEXER,
     # CONF_RESOLUTION,
     # DEVICE_CLASS_VOLTAGE,
+    CONF_ID,
     STATE_CLASS_MEASUREMENT,
     # UNIT_VOLT,
-    CONF_ID,
 )
-from .. import gecko_ns, GeckoComponent, CONF_GECKO_ID
+from .. import gecko_ns, GeckoComponent, CONF_GECKO_ID, CONF_REGISTER
 
 # AUTO_LOAD = ["voltage_sampler"]
 DEPENDENCIES = ["gecko"]
@@ -30,7 +30,7 @@ CONFIG_SCHEMA = (
     )
     .extend(  # Temporary stuff to make unique sensors
         {
-            cv.Required(CONF_SENSOR_ID): cv.string,
+            cv.Required(CONF_REGISTER): cv.hex_uint16_t,
         }
     )
     .extend(
@@ -48,7 +48,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     await cg.register_parented(var, config[CONF_GECKO_ID])
 
-    cg.add(var.set_sensor_id(config[CONF_SENSOR_ID]))
+    cg.add(var.set_register(config[CONF_REGISTER]))
 
     # cg.add(var.set_multiplexer(config[CONF_MULTIPLEXER]))
     # cg.add(var.set_gain(config[CONF_GAIN]))
