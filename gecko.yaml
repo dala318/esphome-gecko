@@ -51,5 +51,5 @@ sensor:
   - platform: gecko
     id: temp
     name: Temperature
-    sensor_id: temperature  # Just some temporary stuff, to be replaced by some enum
+    register: 0x55  # Just some temporary stuff, to be replaced by some enum
     update_interval: 5s

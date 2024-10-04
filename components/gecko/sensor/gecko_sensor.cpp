@@ -22,6 +22,7 @@ void GeckoSensor::update() {
 
 void GeckoSensor::dump_config() {
     LOG_SENSOR("  ", "Gecko Sensor", this);
+    ESP_LOGCONFIG(TAG, "    Register: 0x%04X", this->reg_);
     // ESP_LOGCONFIG(TAG, "    Multiplexer: %u", this->multiplexer_);
     // ESP_LOGCONFIG(TAG, "    Gain: %u", this->gain_);
     // ESP_LOGCONFIG(TAG, "    Resolution: %u", this->resolution_);
