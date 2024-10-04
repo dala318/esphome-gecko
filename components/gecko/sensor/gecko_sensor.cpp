@@ -8,7 +8,7 @@ namespace gecko {
 static const char *const TAG = "gecko.sensor";
 
 float GeckoSensor::sample() {
-    return this->parent_->request_measurement();
+    return this->parent_->request_measurement(this->reg_);
     // return this->parent_->request_measurement(this->multiplexer_, this->gain_, this->resolution_);
 }
 
