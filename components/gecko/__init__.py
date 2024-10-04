@@ -9,7 +9,7 @@ DEPENDENCIES = ["i2c"]
 gecko_ns = cg.esphome_ns.namespace("gecko")
 GeckoComponent = gecko_ns.class_("GeckoComponent", cg.Component, i2c.I2CDevice)
 
-CONF_CONTINUOUS_MODE = "continuous_mode"
+# CONF_CONTINUOUS_MODE = "continuous_mode"
 CONF_GECKO_ID = "gecko_id"
 CONF_REGISTER = "register"
 

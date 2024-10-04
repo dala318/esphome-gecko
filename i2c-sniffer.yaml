@@ -15,8 +15,9 @@ wifi:
 captive_portal:
 
 logger:
+  # level: INFO
   level: DEBUG
-  baud_rate: 0 # disable logging over uart
+  # baud_rate: 0 # disable logging over uart
 
 api:
   encryption:
@@ -31,6 +32,9 @@ esphome:
   name: ${devicename}
   friendly_name: ${friendly_name}
   comment: "${device_description}"
+  # platformio_options:
+  #   build_flags: 
+  #     - -DCONFIG_ARDUINO_LOOP_STACK_SIZE=32768
 
 external_components:
   # - source: github://dala318/esphome-gecko
@@ -61,3 +65,8 @@ sensor:
   - platform: i2c_sniffer
     connection_count:
       name: Number of connections
+
+# text_sensor:
+#   - platform: i2c_sniffer
+#     dump_data:
+#       name: Last data from I2C

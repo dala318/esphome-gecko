@@ -14,7 +14,7 @@ namespace i2c_sniffer {
 static const char *TAG = "i2c_sniffer";
 
 void I2CSnifferComponent::setup() {
-    ESP_LOGCONFIG(TAG, "Setting up stream server...");
+    ESP_LOGCONFIG(TAG, "Setting up I2C Sniffer...");
 
     // The make_unique() wrapper doesn't like arrays, so initialize the unique_ptr directly.
     this->buf_ = std::unique_ptr<uint8_t[]>{new uint8_t[this->buf_size_]};
@@ -31,7 +31,7 @@ void I2CSnifferComponent::setup() {
     this->socket_->bind(reinterpret_cast<struct sockaddr *>(&bind_addr), bind_addrlen);
     this->socket_->listen(8);
 
-    // sniffer specific
+    // Sniffer specific
     this->reset_i2c_variables();
     this->scl_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_raising_scl, this, gpio::INTERRUPT_RISING_EDGE);
     this->sda_pin_->attach_interrupt(I2CSnifferComponent::i2c_trigger_on_change_sda, this, gpio::INTERRUPT_ANY_EDGE);
@@ -44,6 +44,7 @@ void I2CSnifferComponent::loop()
     this->accept();
     this->read();
     this->flush();
+    this->local_output();
     this->empty_sockets();
     // this->write();
     this->cleanup();
@@ -51,13 +52,18 @@ void I2CSnifferComponent::loop()
 
 void I2CSnifferComponent::dump_config()
 {
-    ESP_LOGCONFIG(TAG, "Stream Server:");
+    ESP_LOGCONFIG(TAG, "I2C Sniffer:");
     ESP_LOGCONFIG(TAG, "  Address: %s:%u", esphome::network::get_use_address().c_str(), this->port_);
+    LOG_PIN("  SDA pin: ", this->sda_pin_);
+    LOG_PIN("  SCL pin: ", this->scl_pin_);
 #ifdef USE_BINARY_SENSOR
     LOG_BINARY_SENSOR("  ", "Connected:", this->connected_sensor_);
 #endif
 #ifdef USE_SENSOR
     LOG_SENSOR("  ", "Connection count:", this->connection_count_sensor_);
+#endif
+#ifdef USE_TEXT_SENSOR
+    LOG_TEXT_SENSOR("  ", "Dump data:", this->dump_data_sensor_);
 #endif
 }
 
@@ -106,6 +112,7 @@ void I2CSnifferComponent::cleanup()
 
 void I2CSnifferComponent::read()
 {
+    this->read_data_bytes_ = 0;
     if(this->i2c_status_ == I2C_IDLE)
     {
         if(this->buffer_poi_w_ == this->buffer_poi_r_)  //There is nothing to say
@@ -113,15 +120,16 @@ void I2CSnifferComponent::read()
 
         uint16_t pw = this->buffer_poi_w_;
         uint8_t read_data[9600];
-        uint16_t read_data_bytes = 0;
-        std::string read_data_str = "";
-        ESP_LOGD(TAG, "\nSCL up: %d SDA up: %d SDA down: %d false start: %d\n", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_cnt_);
+
+        this->read_str_ = "";        
+        // TODO: Logging or setting text_sensor here causes stack overflow!?
+        // ESP_LOGD(TAG, "SCL up: %u SDA up: %u SDA down: %u false start: %u", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_cnt_);
         while(this->buffer_poi_r_ < pw)
         {
-            read_data[read_data_bytes] = this->data_buffer_[this->buffer_poi_r_];
-            read_data_str += this->data_buffer_[this->buffer_poi_r_];
+            read_data[this->read_data_bytes_] = this->data_buffer_[this->buffer_poi_r_];
+            this->read_str_ += this->data_buffer_[this->buffer_poi_r_];
             this->buffer_poi_r_++;
-            read_data_bytes++;
+            this->read_data_bytes_++;
         }
 
         //if there is no I2C action in progress and there wasn't during the Serial.print then buffer was printed out completly and can be reset.
@@ -131,16 +139,22 @@ void I2CSnifferComponent::read()
             this->buffer_poi_r_ = 0;
         }	
 
-        if (read_data_bytes > 0)
+        if (this->read_data_bytes_ > 0)
         {
-            ESP_LOGD(TAG, "Read %d bytes data", read_data_bytes);
-            ESP_LOGD(TAG, ">> %s", read_data_str);
+            // TODO: Logging or setting text_sensor here causes stack overflow!?
+
+            // ESP_LOGD(TAG, "Read %u bytes data", this->read_data_bytes_);
+            // ESP_LOGD(TAG, ">> %s", this->read_str_);
+
+// #ifdef USE_TEXT_SENSOR
+//             if (this->dump_data_sensor_)
+//                 this->dump_data_sensor_->publish_state(this->read_str_);
+// #endif
 
             size_t len = 0;
             size_t read_from = 0;
             int available;
-            // while ((available = this->stream_->available()) > 0)
-            while ((available = read_data_bytes - read_from) > 0)
+            while ((available = this->read_data_bytes_ - read_from) > 0)
             {
                 size_t free = this->buf_size_ - (this->buf_head_ - this->buf_tail_);
                 if (free == 0) {
@@ -169,6 +183,21 @@ void I2CSnifferComponent::read()
     }
 }
 
+void I2CSnifferComponent::local_output() {
+    if (this->read_data_bytes_ > 0)
+    {
+        ESP_LOGD(TAG, "SCL up: %u SDA up: %u SDA down: %u false start: %u", this->scl_up_cnt_, this->sda_up_cnt_, this->sda_down_cnt_, this->false_start_cnt_);
+        ESP_LOGD(TAG, "Read %u bytes data", this->read_data_bytes_);
+        ESP_LOGD(TAG, ">> %s", this->read_str_.c_str());
+
+#ifdef USE_TEXT_SENSOR
+        if (this->dump_data_sensor_)
+            this->dump_data_sensor_->publish_state(this->read_str_.c_str());
+            // this->dump_data_sensor_->publish_state(std::string((char*)this->data_buffer_));
+#endif
+    }
+}
+
 void I2CSnifferComponent::flush() {
     ssize_t written;
     this->buf_tail_ = this->buf_head_;
@@ -192,7 +221,9 @@ void I2CSnifferComponent::flush() {
         } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
             // Expected if the (TCP) transmit buffer is full, nothing to do.
         } else {
-            ESP_LOGE(TAG, "Failed to write to client %s with error %d!", client.identifier.c_str(), errno);
+            // ESP_LOGE(TAG, "Failed to write to client %s with error %u!", client.identifier.c_str(), errno);
+            ESP_LOGE(TAG, "Failed to write to client %s!", client.identifier.c_str());
+            ESP_LOGE(TAG, "   > error %u", errno);
         }
 
         this->buf_tail_ = std::min(this->buf_tail_, client.position);
@@ -211,6 +242,7 @@ void I2CSnifferComponent::empty_sockets() {
         {
             // TODO: Remove, using this for now to try to fake data from i2c
             ESP_LOGD(TAG, "Faking data");
+            this->data_buffer_[this->buffer_poi_w_++] = ' ';
             this->data_buffer_[this->buffer_poi_w_++] = '0';
             this->data_buffer_[this->buffer_poi_w_++] = '1';
             this->data_buffer_[this->buffer_poi_w_++] = '2';
@@ -220,6 +252,12 @@ void I2CSnifferComponent::empty_sockets() {
             this->data_buffer_[this->buffer_poi_w_++] = '6';
             this->data_buffer_[this->buffer_poi_w_++] = '7';
             this->data_buffer_[this->buffer_poi_w_++] = '8';
+            this->data_buffer_[this->buffer_poi_w_++] = 'A';
+            this->data_buffer_[this->buffer_poi_w_++] = 'B';
+            this->data_buffer_[this->buffer_poi_w_++] = 'C';
+            this->data_buffer_[this->buffer_poi_w_++] = 'D';
+            this->data_buffer_[this->buffer_poi_w_++] = 'E';
+            this->data_buffer_[this->buffer_poi_w_++] = 'F';
         }
 
         if (read == 0 || errno == ECONNRESET) {
@@ -228,13 +266,17 @@ void I2CSnifferComponent::empty_sockets() {
         } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
             // Expected if the (TCP) receive buffer is empty, nothing to do.
         } else {
-            ESP_LOGW(TAG, "Failed to read from client %s with error %d!", client.identifier.c_str(), errno);
+            // ESP_LOGW(TAG, "Failed to read from client %s with error %u!", client.identifier.c_str(), errno);
+            ESP_LOGW(TAG, "Failed to read from client %s!", client.identifier.c_str());
+            ESP_LOGW(TAG, "   > error %u", errno);
         }
     }
 }
 
 void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferComponent *sniffer)
 {
+    ESP_LOGD(TAG, "SCL Rising triggered");
+
     sniffer->scl_up_cnt_++;
 
     //is it a false trigger?
@@ -292,6 +334,8 @@ void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_raising_scl(I2CSnifferCompone
 
 void IRAM_ATTR I2CSnifferComponent::i2c_trigger_on_change_sda(I2CSnifferComponent *sniffer)
 {
+    ESP_LOGD(TAG, "SDA Change triggered");
+
     uint8_t i2c_bit_d = 0;
     uint8_t i2c_bit_d2 = 1;
     // Make sure that the SDA is in stable state
